@@ -12,16 +12,24 @@ library(XLConnect)
 library(rpivotTable)
 
 
-localDir = 'C:/Users/01425453/Google Drive/Work/Projects Current/SANEDI Dist costs/R regional elec profiles/'# this folder
-gdxLocation = 'C:/AnswerTIMESv6/Gams_WrkTI/Gamssave/' 
+localDir = 'C:/Users/01425453/Documents/R/DispatchProfilesAnalyses/'# this folder
+gdxLocation = 'C:/SATIMGE_02/SATM/Gams_WrkTI-PAMS/Gamssave/' 
+
+resourcesPath = paste(localDir,'resources',sep = '')
+TSfilepath = paste(resourcesPath,'/timeslice_data_8ts.xlsx',sep = '')
+
+modellist =  c('REFU') #list of model results to comapre.  
+technames = '^E' # Names of technologies to look at. 
+sectornames  = '.*'
 
 #mapping of techs and commodities
-mapPRC = read.csv(paste(localDir,'/mapPRC.csv',sep ='')) # Process + Tech.Description + Sector + Subsector + Subsubsector
-mapCOM = read.csv(paste(localDir,'/mapCOM.csv',sep =''))
+mapPRC = read.csv(paste(resourcesPath,'/mapPRC.csv',sep ='')) # Process + Tech.Description + Sector + Subsector + Subsubsector
+mapCOM = read.csv(paste(resourcesPath,'/mapCOM.csv',sep =''))
 
-source(paste(localDir,'loadUsefulFunctions.R',sep = ''))
+#load functions
+source(paste(resourcesPath,'/functions_oct2017.R',sep =''))
 
-modellist =  c('SATIM_SA15','RUN1CPT28') 
+
 N = length(modellist)
 tmp2 = data.frame()
 
@@ -29,7 +37,8 @@ tmp2 = data.frame()
 for(i in seq(1,N)){
   gdxname = modellist[i]
   DBPath = paste(c(gdxLocation,gdxname,'.gdx'),collapse = '')
-  print(DBPath)
+  print(gdxname)
+  
   loadTsTablefromDB(DBPath)
   
   FOUT =rgdx.param(DBPath,'F_OUT')
@@ -38,41 +47,19 @@ for(i in seq(1,N)){
   names(FOUT) = c('Region','V_Year','Year','Process','Commodity','Timeslice','F_OUT')
   names(FIN) = c('Region','V_Year','Year','Process','Commodity','Timeslice','F_IN')
   
-  technames = c('EPDD-N',
-                'EPDW-N',
-                'EPT-N',
-                'EPP-N',
-                'EPDD-E',
-                'EPDW-E',
-                'EPT-E',
-                'EPP-E',
-                'ESTOREDUM') #name of tech we want to look at
-  colnames = c('Year','Process','Commodity','Timeslice','F_OUT','F_IN','Region')
+  FOUT = addPRCmap(FOUT)
+  FIN = addPRCmap(FIN)
   
-  Process_name = c('Storage','Storage_Weekly','Turbine','Pump','Storage','Storage_Weekly','Turbine','Pump','Simple Storage')
-  Process = technames
-  dfname = data.frame(Process,Process_name)
-  
-  tech_fout = FOUT[FOUT$Process%in% technames,names(FOUT)%in% colnames]
-  tech_fin = FIN[FIN$Process%in% technames,names(FIN)%in% colnames]
-  
-  tmpcheck = merge(tech_fout,dfname,all.x = T)
-  tmpcheck[grepl('-E$',tmpcheck$Process),'vintage'] = 'Existing'
-  tmpcheck[grepl('-N$',tmpcheck$Process),'vintage'] = 'New'
-  
-  print(gdxname)
+  tech_fout = FOUT[grepl(technames,FOUT$Process)&grepl(sectornames,FOUT$Sector),names(FOUT) != 'V_Year']
+  tech_fin = FIN[grepl(technames,FIN$Process)&grepl(sectornames,FIN$Sector),names(FIN)!= 'V_Year']
+  #drop PRWENV
+  tech_fout = tech_fout[tech_fout$Commodity != 'PWRENV',]
   #checkPumpRunningTurbines(tmpcheck)
-  
   
   tmpin = makeHourlyDetail(tech_fin)
   tmpout = makeHourlyDetail(tech_fout)
   
   tmp = rbind(tmpin,tmpout)
-  
-  
-  tmp = merge(tmp,dfname,all.x = T)
-  tmp[grepl('-E$',tmp$Process),'vintage'] = 'Existing'
-  tmp[grepl('-N$',tmp$Process),'vintage'] = 'New'
   
   tmp$model = gdxname
   
@@ -84,17 +71,12 @@ for(i in seq(1,N)){
   }
 }
 tmp = tmp2
+#saveRDS(tmp,paste(resourcesPath,'tempRDS.rds'))
+options(viewer = NULL) # stop rstudio from opening in viewer tab - then it opens in browser. 
 
-rpivotTable(tmp, rows = c('Year','Season','vintage','Process_name','flow_dir'),
-            cols = c('Day','Block'),
+#create rpivottable. 
+
+rpivotTable(tmp, rows = c('Year','Season','Process','Tech.Description','flow_dir'),
+            cols = c('Day','Block','hour'),
             aggregatorName = 'Average',
             vals = 'flow_amount')
-
-#make df of results
-myyear = 2030
-colnames = c('flow_dir','Process_name','Year','flow_amount','Season','Day','Block')
-tmp = tmp[tmp$Year == myyear,(names(tmp)%in% colnames)]
-#tmp$flow_amount = round(tmp$flow_amount,digits = 3)
-cast_tmp = dcast(tmp,Year+Season+Day+Process_name+flow_dir~Block,mean,value.var = 'flow_amount',fun.aggregate = mean,na.rm = T)
-cast_tmp[is.na(cast_tmp)] = ''
-View(cast_tmp  )

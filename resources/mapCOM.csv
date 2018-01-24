@@ -1,4 +1,5 @@
 Commodity,Commodity_Name
+IPPSTM,Steam
 IFAELC,Electricity
 TRAEVP,Electricity
 TRAEVF,Electricity
@@ -98,6 +99,7 @@ MTH,Methanol
 N2OS,
 NMVS,
 NOXS,
+nuc,Nuclear
 NUC,Nuclear
 OAG,AviationGasoline
 OCR,Crude Oil
@@ -154,7 +156,7 @@ RESOKE,AviationFuel
 RESOLP,LPG
 RESP10S,
 RESSOXS,
-SOL,Methanol
+SOL,Solar
 SOXS,
 TRACH4S,
 TRACMOX,
