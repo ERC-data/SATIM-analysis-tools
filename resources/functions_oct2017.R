@@ -112,7 +112,13 @@ makeHourlyDetail <- function(tmp){
   tmp3 = merge(tmp3,tsTable,by = 'Timeslice')
   tmp3$GW = tmp3$Flow*277.78/(8760*tmp3$Fraction)
   colnames = c(names(tmp),'GW')
-  tmp2 = tmp2[,colnames]
+  if(is.null(tmp2[1,1])){
+    #in case the if statement above does not get called. 
+    tmp2 = data.frame()
+  }else{
+    tmp2 = tmp2[,colnames]
+  }
+  
   tmp3 = tmp3[,colnames]
   
   #recombine the now extrapolated to full ts data to the others that didnt need to be extrapolated

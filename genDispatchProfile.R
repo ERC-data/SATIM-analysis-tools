@@ -18,8 +18,8 @@ gdxLocation = 'C:/SATIMGE_02/SATM/Gams_WrkTI-PAMS/Gamssave/'
 resourcesPath = paste(localDir,'resources',sep = '')
 TSfilepath = paste(resourcesPath,'/timeslice_data_8ts.xlsx',sep = '')
 
-modellist =  c('REFU') #list of model results to comapre.  
-technames = '^E' # Names of technologies to look at. 
+modellist =  c('REFU-14') #list of model results to comapre.  
+technames = '^XI.*ELC' # Names of technologies to look at. 
 sectornames  = '.*'
 
 #mapping of techs and commodities
@@ -28,7 +28,6 @@ mapCOM = read.csv(paste(resourcesPath,'/mapCOM.csv',sep =''))
 
 #load functions
 source(paste(resourcesPath,'/functions_oct2017.R',sep =''))
-
 
 N = length(modellist)
 tmp2 = data.frame()
