@@ -1,8 +1,10 @@
-# This gets the operational results for the pumped storage
+# This gets the operational results any specified technology
 #   converts these to hourly detail
 #   also has power (GW) results
 
 #20 June 2017
+#can now safely look at multiple scenario results. 
+
 library(reshape2)
 library(ggplot2)
 library(scatterplot3d)
@@ -18,8 +20,10 @@ gdxLocation = 'C:/SATIMGE_02/SATM/Gams_WrkTI-PAMS/Gamssave/'
 resourcesPath = paste(localDir,'resources',sep = '')
 TSfilepath = paste(resourcesPath,'/timeslice_data_8ts.xlsx',sep = '')
 
-modellist =  c('REFU-14') #list of model results to comapre.  
-technames = '^XI.*ELC' # Names of technologies to look at. 
+#list of model results to comapre.  
+modellist =  c('REFU')
+# Names of technologies to look at. 
+technames = c('ETRANS')
 sectornames  = '.*'
 
 #mapping of techs and commodities
@@ -30,7 +34,7 @@ mapCOM = read.csv(paste(resourcesPath,'/mapCOM.csv',sep =''))
 source(paste(resourcesPath,'/functions_oct2017.R',sep =''))
 
 N = length(modellist)
-tmp2 = data.frame()
+tmp = tmp2 = data.frame()
 
 
 for(i in seq(1,N)){
@@ -54,7 +58,7 @@ for(i in seq(1,N)){
   #drop PRWENV
   tech_fout = tech_fout[tech_fout$Commodity != 'PWRENV',]
   #checkPumpRunningTurbines(tmpcheck)
-  
+  tmpin = tmpout = data.frame()
   tmpin = makeHourlyDetail(tech_fin)
   tmpout = makeHourlyDetail(tech_fout)
   
@@ -70,12 +74,11 @@ for(i in seq(1,N)){
   }
 }
 tmp = tmp2
-#saveRDS(tmp,paste(resourcesPath,'tempRDS.rds'))
+
 options(viewer = NULL) # stop rstudio from opening in viewer tab - then it opens in browser. 
-
 #create rpivottable. 
-
 rpivotTable(tmp, rows = c('Year','Season','Process','Tech.Description','flow_dir'),
             cols = c('Day','Block','hour'),
             aggregatorName = 'Average',
             vals = 'flow_amount')
+
