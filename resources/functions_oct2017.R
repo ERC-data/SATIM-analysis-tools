@@ -50,25 +50,26 @@ loadTsTablefromDB <- function(DBPath){
   #return(tsTable)
 }
 
-makeHourlyDetail <- function(tmp){  
+makeHourlyDetail <- function(df){  
+  print('Making hourly detail...')
   
-  if('F_IN' %in% names(tmp)){
+  if('F_IN' %in% names(df)){
     print('input')
-    tmp$flow_dir = 'in'
-    tmp$flow_amount = tmp$F_IN
-    names(tmp)[names(tmp) == 'F_IN'] = 'Flow'
+    df$flow_dir = 'in'
+    df$flow_amount = df$F_IN
+    names(df)[names(df) == 'F_IN'] = 'Flow'
     
   }else{
     print(
       'output'
     )
-    tmp$flow_dir = 'out'
-    tmp$flow_amount = tmp$F_OUT
-    names(tmp)[names(tmp) == 'F_OUT'] = 'Flow'
+    df$flow_dir = 'out'
+    df$flow_amount = df$F_OUT
+    names(df)[names(df) == 'F_OUT'] = 'Flow'
     
   }
   
-  if('S3'%in% unique(substr(as.character(tmp$Timeslice),1,2))|'D2'%in%unique(substr(as.character(tmp$Timeslice),3,4))){
+  if('S3'%in% unique(substr(as.character(df$Timeslice),1,2))|'D2'%in%unique(substr(as.character(df$Timeslice),3,4))){
     tspath = paste(localDir,"/resources/timeslice_data20.xlsx",sep = '') # location of user defined Timeslices'
     print('Model is 20 timeslices')
   }else{
@@ -77,64 +78,65 @@ makeHourlyDetail <- function(tmp){
   }
   
   blockids = getblockidsDataset(tspath)
-  m = max(nchar(as.character(tmp$Timeslice)))
+  m = max(nchar(as.character(df$Timeslice)))
   
-  if(sum(nchar(as.character(tmp$Timeslice)) < m)>0){
+  if(sum(nchar(as.character(df$Timeslice)) < m)>0){
     print('Some entries have weekly timeslices')
     print('converting these to full timeslices')
     
-    tmp2 = tmp[nchar(as.character(tmp$Timeslice)) < m ,]
-    print(unique(tmp2$Process))
+    df2 = df[nchar(as.character(df$Timeslice)) < m ,]
+    print(unique(df2$Process))
     
     
     print('convert energy to power using TS fractions and time')
     
-    tmp2 = merge(tmp2,tsTable,by = 'Timeslice') #add ts details to the power table  
-    tmp2$GW = tmp2$Flow*277.78/(8760*tmp2$Fraction)
+    df2 = merge(df2,tsTable,by = 'Timeslice') #add ts details to the power table  
+    df2$GW = df2$Flow*277.78/(8760*df2$Fraction)
     
-    tmp2 = merge(tmp2,tsTable,by = 'S') #this adds to the df the missing timeslices that are at a finer resolution
+    df2 = merge(df2,tsTable,by = 'S') #this adds to the df the missing timeslices that are at a finer resolution
     
-    names(tmp2)[grepl('Timeslice.y',names(tmp2))] = 'Timeslice'#rename
-    #names(tmp2)[names(tmp2)=='B'] = 'Block'
+    names(df2)[grepl('Timeslice.y',names(df2))] = 'Timeslice'#rename
+    #names(df2)[names(df2)=='B'] = 'Block'
     
-    tmp2 = tmp2[nchar(as.character(tmp2$Timeslice))==m,]#drop all those that are not full ts length
+    df2 = df2[nchar(as.character(df2$Timeslice))==m,]#drop all those that are not full ts length
     print('done extrapolating to full ts detail')
-    #tmp2 = tmp2[,names(tmp) ]
+    #df2 = df2[,names(df) ]
     
-    
-    #tmp3$Block = substr(as.character(tmp3$Timeslice),5,6)
-    #tmp2 = tmp2[,names(tmp3)]
-    #tmp = rbind(tmp2,tmp3)
+    #df3$Block = substr(as.character(df3$Timeslice),5,6)
+    #df2 = df2[,names(df3)]
+    #df = rbind(df2,df3)
+  }else{
+    df2 = data.frame()
   }
   #get those that were full  timeslice
   print('convert energy to power using TS fractions and time')
-  tmp3 = tmp[(nchar(as.character(tmp$Timeslice)) ==m),]
-  tmp3 = merge(tmp3,tsTable,by = 'Timeslice')
-  tmp3$GW = tmp3$Flow*277.78/(8760*tmp3$Fraction)
-  colnames = c(names(tmp),'GW')
-  if(is.null(tmp2[1,1])){
+  df3 = df[(nchar(as.character(df$Timeslice)) ==m),]
+  df3 = merge(df3,tsTable,by = 'Timeslice')
+  df3$GW = df3$Flow*277.78/(8760*df3$Fraction)
+  colnames = c(names(df),'GW')
+  if(is.null(df2[1,1])){
     #in case the if statement above does not get called. 
-    tmp2 = data.frame()
+    df2 = data.frame()
   }else{
-    tmp2 = tmp2[,colnames]
+    df2 = df2[,colnames]
   }
   
-  tmp3 = tmp3[,colnames]
+  df3 = df3[,colnames]
   
   #recombine the now extrapolated to full ts data to the others that didnt need to be extrapolated
   
-  tmp = rbind(tmp2,tmp3)
+  df = rbind(df2,df3)
   
-  tmp$B = substr(as.character(tmp$Timeslice),5,6)
-  tmp$S = substr(as.character(tmp$Timeslice),1,2)
-  tmp$D = substr(as.character(tmp$Timeslice),3,4)
+  df$B = substr(as.character(df$Timeslice),5,6)
+  df$S = substr(as.character(df$Timeslice),1,2)
+  df$D = substr(as.character(df$Timeslice),3,4)
   
   print('add hourly detail from blocks')
-  tmp = merge(tmp,blockids)       
+  df = merge(df,blockids)       
   
-  tmp$model = gdxname
+  df$model = gdxname
   
-  return(tmp)
+  return(df)
 }
 
 getblockidsDataset <- function(TSfilepath){
