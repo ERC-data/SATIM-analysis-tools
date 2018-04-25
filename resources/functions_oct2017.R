@@ -81,12 +81,11 @@ makeHourlyDetail <- function(df){
   m = max(nchar(as.character(df$Timeslice)))
   
   if(sum(nchar(as.character(df$Timeslice)) < m)>0){
-    print('Some entries have weekly timeslices')
-    print('converting these to full timeslices')
+    print('Some entries have weekly timeslices,and dont go to hourly...')
+    print('...converting these to full timeslices')
     
     df2 = df[nchar(as.character(df$Timeslice)) < m ,]
     print(unique(df2$Process))
-    
     
     print('convert energy to power using TS fractions and time')
     
@@ -96,15 +95,10 @@ makeHourlyDetail <- function(df){
     df2 = merge(df2,tsTable,by = 'S') #this adds to the df the missing timeslices that are at a finer resolution
     
     names(df2)[grepl('Timeslice.y',names(df2))] = 'Timeslice'#rename
-    #names(df2)[names(df2)=='B'] = 'Block'
     
     df2 = df2[nchar(as.character(df2$Timeslice))==m,]#drop all those that are not full ts length
     print('done extrapolating to full ts detail')
-    #df2 = df2[,names(df) ]
     
-    #df3$Block = substr(as.character(df3$Timeslice),5,6)
-    #df2 = df2[,names(df3)]
-    #df = rbind(df2,df3)
   }else{
     df2 = data.frame()
   }
@@ -113,13 +107,16 @@ makeHourlyDetail <- function(df){
   df3 = df[(nchar(as.character(df$Timeslice)) ==m),]
   df3 = merge(df3,tsTable,by = 'Timeslice')
   df3$GW = df3$Flow*277.78/(8760*df3$Fraction)
+  
   colnames = c(names(df),'GW')
+  
   if(is.null(df2[1,1])){
     #in case the if statement above does not get called. 
     df2 = data.frame()
   }else{
     df2 = df2[,colnames]
   }
+  
   
   df3 = df3[,colnames]
   
@@ -134,6 +131,8 @@ makeHourlyDetail <- function(df){
   print('add hourly detail from blocks')
   df = merge(df,blockids)       
   
+  df = df %>%group_by(Year,S,D,B)%>% mutate(hrcount = n(),flow_amount = (flow_amount)/hrcount) #scale flow amount down by number of hours in those blocks so the sum is to the original total for this block
+  df = df[,names(df)!= 'hrcount']
   df$model = gdxname
   
   return(df)
@@ -159,9 +158,12 @@ getblockidsDataset <- function(TSfilepath){
     tmp = data.frame(SeasonName,wday) #create new dataframe
     tmp$DayID = ts_table_days[i,'DayID']#add the dayID
     tmp$DayTypeName = ts_table_days[i,'DayTypeName'] #add the daytypename detail
+    options(warn=-1)
     tmp = cbind(tmp,ts_table_days[i,-c(1,2,3,4)]) #add all the hours for this row
+    options(warn=0)
     
     ts_table_days2 = rbind(ts_table_days2,tmp)# add this to the new dataframe
+    
     tmp = 0
   }
   ts_table_days = ts_table_days2

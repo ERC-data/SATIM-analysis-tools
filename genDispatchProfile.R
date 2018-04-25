@@ -15,13 +15,16 @@ library(rpivotTable)
 
 
 localDir = 'C:/Users/01425453/Documents/R/DispatchProfilesAnalyses/'# this folder
-gdxLocation = 'C:/SATIMGE_02/SATM/Gams_WrkTI-PAMS/Gamssave/' 
+gdxLocation = "C:/SATIMGE_02/GDXout/"#SATM/Gams_WrkTI-PAMS/Gamssave/' 
+GAMS_lib_dir = 'C:/GAMS/win64/24.7' # location of your GAMS main directory. 
+
+igdx(GAMS_lib_dir) # connect to the GAMS library.
 
 resourcesPath = paste(localDir,'resources',sep = '')
 TSfilepath = paste(resourcesPath,'/timeslice_data_8ts.xlsx',sep = '')
 
 #list of model results to comapre.  
-modellist =  c('REFU')
+modellist =  c('Base-UCE')
 # Names of technologies to look at. 
 technames = c('ETRANS')
 sectornames  = '.*'
@@ -42,7 +45,7 @@ for(i in seq(1,N)){
   DBPath = paste(c(gdxLocation,gdxname,'.gdx'),collapse = '')
   print(gdxname)
   
-  loadTsTablefromDB(DBPath)
+  loadTsTablefromDB(DBPath)#get tsTable df into this evironment
   
   FOUT =rgdx.param(DBPath,'F_OUT')
   FIN =rgdx.param(DBPath,'F_IN')
@@ -79,6 +82,6 @@ options(viewer = NULL) # stop rstudio from opening in viewer tab - then it opens
 #create rpivottable. 
 rpivotTable(tmp, rows = c('Year','Season','Process','Tech.Description','flow_dir'),
             cols = c('Day','Block','hour'),
-            aggregatorName = 'Average',
+            aggregatorName = 'Sum',
             vals = 'flow_amount')
 
